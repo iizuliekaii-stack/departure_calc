@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Departure Calculator</title>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<style>
+:root{
+  --bg:#0a1120;
+  --panel:#111b2e;
+  --panel-2:#16223a;
+  --edge:#233252;
+  --amber:#f5a623;
+  --amber-dim:#8a641a;
+  --teal:#2dd4bf;
+  --red:#ef5a5a;
+  --green:#3ecf8e;
+  --text:#e9eef7;
+  --muted:#8695b3;
+  --muted-dim:#5b6785;
+}
+*{ box-sizing:border-box; }
+html{ scroll-behavior:smooth; }
+body{
+  margin:0; padding:0;
+  background:
+    radial-gradient(ellipse at 50% -10%, #1a2848 0%, transparent 55%),
+    var(--bg);
+  color:var(--text);
+  font-family:"Space Grotesk", sans-serif;
+  -webkit-font-smoothing:antialiased;
+}
+button, input, select{ font:inherit; }
+.mono{ font-family:"IBM Plex Mono", monospace; }
+
+.wrap{ max-width:1180px; margin:0 auto; padding:30px 18px 70px; }
+
+header.top{ text-align:center; margin-bottom:30px; }
+.eyebrow{ font-family:"IBM Plex Mono",monospace; font-size:11px; letter-spacing:.22em; text-transform:uppercase; color:var(--amber); margin:0 0 8px; }
+header.top h1{ font-size:clamp(28px,5vw,42px); margin:0 0 8px; letter-spacing:-0.01em; }
+header.top p{ color:var(--muted); font-size:14px; max-width:520px; margin:0 auto; line-height:1.5; }
+
+.layout{ display:grid; grid-template-columns:1fr 420px; gap:22px; align-items:start; }
+@media(max-width:980px){ .layout{ grid-template-columns:1fr; } }
+
+/* CARDS */
+.card{ background:linear-gradient(180deg, var(--panel-2), var(--panel)); border:1px solid var(--edge); border-radius:14px; padding:20px; margin-bottom:16px; }
+.card h2{ font-size:15px; margin:0 0 4px; display:flex; align-items:center; gap:8px; }
+.card .card-sub{ color:var(--muted); font-size:12.5px; margin:0 0 16px; line-height:1.5; }
+
+.field-row{ display:grid; grid-template-columns:1fr 1fr; gap:12px; margin-bottom:12px; }
+.field-row.three{ grid-template-columns:1fr 1fr 1fr; }
+.field{ display:flex; flex-direction:column; gap:5px; }
+.field label{ font-family:"IBM Plex Mono",monospace; font-size:10px; text-transform:uppercase; letter-spacing:.07em; color:var(--muted); }
+.field input, .field select{
+  background:var(--bg); border:1px solid var(--edge); color:var(--text);
+  border-radius:7px; padding:9px 10px; font-size:13.5px;
+}
+.field input:focus, .field select:focus{ outline:2px solid var(--amber); outline-offset:1px; }
+.field-note{ font-size:11px; color:var(--muted-dim); margin-top:2px; }
+
+/* MODE TOGGLE */
+.mode-toggle{ display:flex; gap:8px; margin-bottom:18px; }
+.mode-btn{ flex:1; border:1px solid var(--edge); background:var(--bg); color:var(--muted); border-radius:9px; padding:11px; cursor:pointer; font-weight:600; font-size:13px; transition:.15s; }
+.mode-btn.active{ background:var(--amber); color:#241705; border-color:var(--amber); }
+.mode-btn:hover:not(.active){ border-color:var(--amber); color:var(--amber); }
+
+/* STOPS */
+#stopsContainer{ display:flex; flex-direction:column; gap:12px; margin-bottom:12px; }
+.stop-card{ background:var(--bg); border:1px solid var(--edge); border-radius:10px; padding:14px; position:relative; }
+.stop-card-header{ display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:12px; }
+.stop-badge{ font-family:"IBM Plex Mono",monospace; font-size:10px; color:var(--amber); border:1px solid var(--amber-dim); border-radius:5px; padding:2px 7px; }
+.stop-actions{ display:flex; gap:6px; }
+.icon-btn{ width:26px; height:26px; border-radius:6px; border:1px solid var(--edge); background:var(--panel); color:var(--muted); cursor:pointer; display:flex; align-items:center; justify-content:center; font-size:12px; line-height:1; }
+.icon-btn:hover{ border-color:var(--amber); color:var(--amber); }
+.icon-btn.danger:hover{ border-color:var(--red); color:var(--red); }
+
+.range-toggle{ display:flex; align-items:center; gap:6px; font-size:11px; color:var(--muted); margin:2px 0 10px; cursor:pointer; user-select:none; }
+.range-toggle input{ width:auto; }
+.range-fields{ display:none; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px; }
+.range-fields.show{ display:grid; }
+
+.constraint-extra{ display:none; grid-template-columns:1fr 1fr; gap:10px; margin-top:10px; }
+.constraint-extra.show{ display:grid; }
+.constraint-extra.single{ grid-template-columns:1fr; }
+
+.add-stop-btn{ width:100%; border:1px dashed var(--edge); background:transparent; color:var(--muted); border-radius:10px; padding:13px; cursor:pointer; font-weight:600; font-size:13px; transition:.15s; }
+.add-stop-btn:hover{ border-color:var(--amber); color:var(--amber); }
+
+/* RESULTS PANEL */
+.results{ position:sticky; top:18px; }
+.board{ background:linear-gradient(180deg,#0d1526,#0a0f1c); border:1px solid var(--edge); border-radius:14px; padding:20px; margin-bottom:16px; }
+.board-title{ font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-bottom:14px; }
+
+.metric-primary{ text-align:center; padding:16px 10px 18px; border-radius:10px; margin-bottom:14px; background:rgba(245,166,35,0.08); border:1px solid var(--amber-dim); }
+.metric-primary .m-label{ font-family:"IBM Plex Mono",monospace; font-size:10px; letter-spacing:.14em; text-transform:uppercase; color:var(--amber); margin-bottom:6px; }
+.metric-primary .m-value{ font-family:"IBM Plex Mono",monospace; font-size:clamp(32px,6vw,44px); font-weight:600; letter-spacing:-0.02em; color:#fff; }
+.metric-primary .m-sub{ font-size:12px; color:var(--muted); margin-top:4px; }
+
+.metric-grid{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:14px; }
+.metric{ background:var(--panel); border:1px solid var(--edge); border-radius:9px; padding:11px 12px; }
+.metric .m-label{ font-family:"IBM Plex Mono",monospace; font-size:9px; letter-spacing:.1em; text-transform:uppercase; color:var(--muted); margin-bottom:4px; }
+.metric .m-value{ font-family:"IBM Plex Mono",monospace; font-size:17px; font-weight:600; }
+
+.scenario-row{ display:grid; grid-template-columns:1fr 1fr 1fr; gap:8px; }
+.scenario{ text-align:center; border-radius:8px; padding:10px 6px; border:1px solid var(--edge); background:var(--panel); }
+.scenario .s-label{ font-family:"IBM Plex Mono",monospace; font-size:9px; text-transform:uppercase; letter-spacing:.08em; color:var(--muted); margin-bottom:5px; }
+.scenario .s-value{ font-family:"IBM Plex Mono",monospace; font-size:14px; font-weight:600; }
+.scenario.ok{ border-color:rgba(62,207,142,0.4); }
+.scenario.ok .s-value{ color:var(--green); }
+.scenario.warn{ border-color:rgba(245,166,35,0.4); }
+.scenario.warn .s-value{ color:var(--amber); }
+.scenario.late{ border-color:rgba(239,90,90,0.5); }
+.scenario.late .s-value{ color:var(--red); }
+
+/* CONFLICTS */
+.conflicts{ margin-bottom:16px; }
+.conflict-item{ display:flex; gap:9px; align-items:flex-start; background:rgba(239,90,90,0.08); border:1px solid rgba(239,90,90,0.35); border-radius:9px; padding:11px 12px; margin-bottom:8px; font-size:12.5px; line-height:1.45; }
+.conflict-item .flag{ flex-shrink:0; }
+.no-conflicts{ display:flex; gap:9px; align-items:center; background:rgba(62,207,142,0.08); border:1px solid rgba(62,207,142,0.35); border-radius:9px; padding:11px 12px; font-size:12.5px; color:var(--green); }
+
+/* TIMELINE */
+.timeline{ background:var(--panel); border:1px solid var(--edge); border-radius:14px; padding:18px 18px 14px; }
+.timeline-title{ font-family:"IBM Plex Mono",monospace; font-size:10.5px; letter-spacing:.16em; text-transform:uppercase; color:var(--muted); margin-bottom:12px; }
+.t-row{ display:grid; grid-template-columns:66px 1fr; gap:12px; padding:8px 0; border-bottom:1px solid var(--edge); }
+.t-row:last-child{ border-bottom:none; }
+.t-time{ font-family:"IBM Plex Mono",monospace; font-size:13px; font-weight:600; color:var(--teal); }
+.t-desc{ font-size:13px; line-height:1.4; }
+.t-row.milestone .t-time{ color:var(--amber); }
+.t-row.milestone .t-desc{ font-weight:600; }
+.t-row.dwell .t-time{ color:var(--muted); }
+.t-row.dwell .t-desc{ color:var(--muted); }
+
+.calc-note{ text-align:center; color:var(--muted-dim); font-size:11.5px; margin-top:14px; }
+</style>
+</head>
+<body>
+
+<div class="wrap">
+
+  <header class="top">
+    <p class="eyebrow">Backward-Planned Timing</p>
+    <h1>Departure Calculator</h1>
+    <p>Set your required arrival time, add every stop along the way, and this works backward to tell you exactly when to leave.</p>
+  </header>
+
+  <div class="layout">
+
+    <!-- BUILDER -->
+    <div id="builder">
+
+      <div class="card">
+        <div class="mode-toggle">
+          <button class="mode-btn active" id="modePlanBtn" onclick="setMode('plan', this)">🗺️ Plan Ahead</button>
+          <button class="mode-btn" id="modeNowBtn" onclick="setMode('now', this)">🏃 Leaving Now</button>
+        </div>
+
+        <h2>Trip Setup</h2>
+        <p class="card-sub">Where you're starting, where you need to be, and by when.</p>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="startName">Starting location</label>
+            <input type="text" id="startName" value="Home">
+          </div>
+          <div class="field">
+            <label for="destName">Final destination</label>
+            <input type="text" id="destName" value="Work">
+          </div>
+        </div>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="requiredArrival">Required arrival time</label>
+            <input type="time" id="requiredArrival" value="09:00">
+          </div>
+          <div class="field">
+            <label for="arrivalBuffer">Arrive early by (min)</label>
+            <input type="number" id="arrivalBuffer" min="0" value="10">
+          </div>
+        </div>
+
+        <div class="field-row" id="currentTimeRow" style="display:none;">
+          <div class="field">
+            <label for="currentTime">Current time</label>
+            <input type="time" id="currentTime">
+          </div>
+          <div class="field">
+            <label>&nbsp;</label>
+            <button class="add-stop-btn" style="padding:9px;" onclick="useNow()">Use current time</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2>Stops</h2>
+        <p class="card-sub">Add every place you're stopping on the way. Reorder with the arrows if needed.</p>
+
+        <div id="stopsContainer"></div>
+
+        <button class="add-stop-btn" onclick="addStop()">+ Add Stop</button>
+      </div>
+
+      <div class="card">
+        <h2>Final Leg</h2>
+        <p class="card-sub">The trip from your last stop (or start, if no stops) to your destination.</p>
+
+        <div class="field-row">
+          <div class="field">
+            <label for="finalTravel">Travel time (min)</label>
+            <input type="number" id="finalTravel" min="0" value="20">
+          </div>
+          <div class="field">
+            <label for="finalBuffer">Leg buffer (min)</label>
+            <input type="number" id="finalBuffer" min="0" value="5">
+          </div>
+        </div>
+
+        <label class="range-toggle">
+          <input type="checkbox" id="finalRangeToggle" onchange="toggleRange('finalRangeFields', this)">
+          Add a travel time range (best–worst case)
+        </label>
+        <div class="range-fields" id="finalRangeFields">
+          <div class="field"><label for="finalMin">Best case (min)</label><input type="number" id="finalMin" min="0" placeholder="e.g. 15"></div>
+          <div class="field"><label for="finalMax">Worst case (min)</label><input type="number" id="finalMax" min="0" placeholder="e.g. 35"></div>
+        </div>
+
+        <div class="field-row" style="margin-top:2px;">
+          <div class="field">
+            <label for="finalParking">Parking/walking (min)</label>
+            <input type="number" id="finalParking" min="0" value="0">
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- RESULTS -->
+    <div class="results" id="resultsPanel">
+      <div class="board">
+        <div class="board-title" id="boardTitle">Recommended</div>
+        <div class="metric-primary" id="primaryMetric">
+          <div class="m-label">Leave By</div>
+          <div class="m-value mono" id="primaryValue">--:--</div>
+          <div class="m-sub" id="primarySub"></div>
+        </div>
+
+        <div class="metric-grid">
+          <div class="metric"><div class="m-label">Required Arrival</div><div class="m-value" id="metricRequired">--:--</div></div>
+          <div class="metric"><div class="m-label">Latest Departure</div><div class="m-value" id="metricLatest">--:--</div></div>
+          <div class="metric"><div class="m-label">Total Travel</div><div class="m-value" id="metricTravel">-- min</div></div>
+          <div class="metric"><div class="m-label">Time At Stops</div><div class="m-value" id="metricStops">-- min</div></div>
+        </div>
+
+        <div class="board-title" style="margin-top:2px;">Scenario Range</div>
+        <div class="scenario-row" id="scenarioRow">
+          <div class="scenario"><div class="s-label">Best</div><div class="s-value mono">--:--</div></div>
+          <div class="scenario"><div class="s-label">Expected</div><div class="s-value mono">--:--</div></div>
+          <div class="scenario"><div class="s-label">Worst</div><div class="s-value mono">--:--</div></div>
+        </div>
+      </div>
+
+      <div class="board conflicts" id="conflictsBoard">
+        <div class="board-title">Schedule Check</div>
+        <div id="conflictsList"></div>
+      </div>
+
+      <div class="timeline">
+        <div class="timeline-title">Timeline</div>
+        <div id="timelineList"></div>
+      </div>
+    </div>
+
+  </div>
+
+  <p class="calc-note">Recalculates automatically as you edit any field.</p>
+</div>
+
+<script>
+/* ===================== TIME HELPERS ===================== */
+function parseTime(str){
+  if(!str) return null;
+  const [h,m] = str.split(":").map(Number);
+  if(isNaN(h) || isNaN(m)) return null;
+  return h*60 + m;
+}
+function fmtTime(mins){
+  if(mins === null || mins === undefined || isNaN(mins)) return "--:--";
+  let m = ((Math.round(mins) % 1440) + 1440) % 1440;
+  const wrapped = mins < 0 || mins >= 1440;
+  let h = Math.floor(m/60);
+  const mm = m % 60;
+  const ampm = h >= 12 ? "PM" : "AM";
+  let h12 = h % 12; if(h12 === 0) h12 = 12;
+  return `${h12}:${String(mm).padStart(2,"0")} ${ampm}` + (wrapped ? " *" : "");
+}
+function fmtDuration(mins){
+  mins = Math.round(mins);
+  if(mins < 0) return "0 min";
+  if(mins < 60) return `${mins} min`;
+  const h = Math.floor(mins/60), m = mins%60;
+  return m===0 ? `${h} hr` : `${h} hr ${m} min`;
+}
+function num(id, fallback){
+  const el = document.getElementById(id);
+  if(!el) return fallback;
+  const v = parseFloat(el.value);
+  return isNaN(v) ? fallback : v;
+}
+function uniqueId(){ return "s" + Math.random().toString(36).slice(2,9); }
+
+/* ===================== MODE ===================== */
+let mode = "plan";
+function setMode(m, btn){
+  mode = m;
+  document.querySelectorAll(".mode-btn").forEach(b=>b.classList.remove("active"));
+  btn.classList.add("active");
+  document.getElementById("currentTimeRow").style.display = (m==="now") ? "grid" : "none";
+  if(m==="now" && !document.getElementById("currentTime").value) useNow();
+  calculate();
+}
+function useNow(){
+  const d = new Date();
+  const hh = String(d.getHours()).padStart(2,"0");
+  const mm = String(d.getMinutes()).padStart(2,"0");
+  document.getElementById("currentTime").value = `${hh}:${mm}`;
+  calculate();
+}
+
+/* ===================== STOPS: DOM BUILDING ===================== */
+let stopCount = 0;
+const stopsContainer = document.getElementById("stopsContainer");
+
+function stopCardTemplate(id, index){
+  return `
+  <div class="stop-card" data-id="${id}">
+    <div class="stop-card-header">
+      <span class="stop-badge">STOP ${index}</span>
+      <div class="stop-actions">
+        <button class="icon-btn" title="Move up" onclick="moveStop('${id}', -1)">↑</button>
+        <button class="icon-btn" title="Move down" onclick="moveStop('${id}', 1)">↓</button>
+        <button class="icon-btn danger" title="Remove" onclick="removeStop('${id}')">✕</button>
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Stop name</label>
+        <input type="text" class="f-name" placeholder="e.g. Coffee Shop">
+      </div>
+      <div class="field">
+        <label>Travel time from previous (min)</label>
+        <input type="number" class="f-travel" min="0" value="15">
+      </div>
+    </div>
+
+    <label class="range-toggle">
+      <input type="checkbox" class="f-range-toggle" onchange="toggleRange(this)">
+      Add a travel time range (best–worst case)
+    </label>
+    <div class="range-fields">
+      <div class="field"><label>Best case (min)</label><input type="number" class="f-travel-min" min="0" placeholder="e.g. 10"></div>
+      <div class="field"><label>Worst case (min)</label><input type="number" class="f-travel-max" min="0" placeholder="e.g. 25"></div>
+    </div>
+
+    <div class="field-row three">
+      <div class="field">
+        <label>Parking/walking (min)</label>
+        <input type="number" class="f-parking" min="0" value="0">
+      </div>
+      <div class="field">
+        <label>Leg buffer (min)</label>
+        <input type="number" class="f-legbuffer" min="0" value="0">
+      </div>
+      <div class="field">
+        <label>Stay duration (min)</label>
+        <input type="number" class="f-duration" min="0" value="10">
+      </div>
+    </div>
+
+    <div class="field-row">
+      <div class="field">
+        <label>Stop buffer (min)</label>
+        <input type="number" class="f-stopbuffer" min="0" value="0">
+      </div>
+      <div class="field">
+        <label>Opens at (optional)</label>
+        <input type="time" class="f-opensat">
+      </div>
+    </div>
+
+    <div class="field">
+      <label>Time constraint</label>
+      <select class="f-constraint" onchange="updateConstraintUI(this)">
+        <option value="none">None</option>
+        <option value="arriveBy">Arrive by</option>
+        <option value="arriveAt">Arrive at</option>
+        <option value="leaveBy">Leave by</option>
+        <option value="leaveAt">Leave at</option>
+        <option value="appointment">Appointment window</option>
+      </select>
+    </div>
+
+    <div class="constraint-extra single">
+      <div class="field"><label>Constraint time</label><input type="time" class="f-constraint-time"></div>
+    </div>
+    <div class="constraint-extra">
+      <div class="field"><label>Appointment start</label><input type="time" class="f-appt-start"></div>
+      <div class="field"><label>Appointment end</label><input type="time" class="f-appt-end"></div>
+    </div>
+  </div>`;
+}
+
+function refreshBadges(){
+  [...stopsContainer.querySelectorAll(".stop-card")].forEach((card, i)=>{
+    card.querySelector(".stop-badge").textContent = "STOP " + (i+1);
+  });
+}
+
+function addStop(){
+  stopCount++;
+  const id = uniqueId();
+  const wrapper = document.createElement("div");
+  wrapper.innerHTML = stopCardTemplate(id, stopsContainer.children.length + 1);
+  stopsContainer.appendChild(wrapper.firstElementChild);
+  refreshBadges();
+  calculate();
+}
+
+function removeStop(id){
+  const card = stopsContainer.querySelector(`[data-id="${id}"]`);
+  if(card) card.remove();
+  refreshBadges();
+  calculate();
+}
+
+function moveStop(id, direction){
+  const card = stopsContainer.querySelector(`[data-id="${id}"]`);
+  if(!card) return;
+  if(direction === -1 && card.previousElementSibling){
+    stopsContainer.insertBefore(card, card.previousElementSibling);
+  } else if(direction === 1 && card.nextElementSibling){
+    stopsContainer.insertBefore(card.nextElementSibling, card);
+  }
+  refreshBadges();
+  calculate();
+}
+
+function toggleRange(a, b){
+  // supports both call styles: toggleRange(checkboxEl) for stop cards, toggleRange(targetId, checkboxEl) for final leg
+  let checkbox, targetEl;
+  if(b){
+    checkbox = b;
+    targetEl = document.getElementById(a);
+  } else {
+    checkbox = a;
+    targetEl = checkbox.closest(".stop-card").querySelector(".range-fields");
+  }
+  targetEl.classList.toggle("show", checkbox.checked);
+  calculate();
+}
+
+function updateConstraintUI(select){
+  const card = select.closest(".stop-card");
+  const singleExtra = card.querySelector(".constraint-extra.single");
+  const apptExtra = card.querySelector(".constraint-extra:not(.single)");
+  const val = select.value;
+  singleExtra.classList.toggle("show", ["arriveBy","arriveAt","leaveBy","leaveAt"].includes(val));
+  apptExtra.classList.toggle("show", val === "appointment");
+  calculate();
+}
+
+/* ===================== READ STATE FROM DOM ===================== */
+function readStops(){
+  return [...stopsContainer.querySelectorAll(".stop-card")].map(card=>{
+    const g = sel => card.querySelector(sel);
+    const rangeOn = g(".f-range-toggle").checked;
+    return {
+      name: g(".f-name").value.trim() || "Stop",
+      travel: {
+        expected: parseFloat(g(".f-travel").value) || 0,
+        min: rangeOn && g(".f-travel-min").value !== "" ? parseFloat(g(".f-travel-min").value) : null,
+        max: rangeOn && g(".f-travel-max").value !== "" ? parseFloat(g(".f-travel-max").value) : null
+      },
+      parking: parseFloat(g(".f-parking").value) || 0,
+      legBuffer: parseFloat(g(".f-legbuffer").value) || 0,
+      duration: parseFloat(g(".f-duration").value) || 0,
+      stopBuffer: parseFloat(g(".f-stopbuffer").value) || 0,
+      opensAt: g(".f-opensat").value ? parseTime(g(".f-opensat").value) : null,
+      constraintType: g(".f-constraint").value,
+      constraintTime: g(".f-constraint-time").value ? parseTime(g(".f-constraint-time").value) : null,
+      apptStart: g(".f-appt-start").value ? parseTime(g(".f-appt-start").value) : null,
+      apptEnd: g(".f-appt-end").value ? parseTime(g(".f-appt-end").value) : null
+    };
+  });
+}
+
+function readFinalLeg(){
+  const rangeOn = document.getElementById("finalRangeToggle").checked;
+  return {
+    expected: num("finalTravel", 0),
+    min: rangeOn && document.getElementById("finalMin").value !== "" ? num("finalMin", null) : null,
+    max: rangeOn && document.getElementById("finalMax").value !== "" ? num("finalMax", null) : null,
+    parking: num("finalParking", 0),
+    buffer: num("finalBuffer", 0)
+  };
+}
+
+/* ===================== CALCULATION ENGINE ===================== */
+function legTime(travelValue, parking, buffer, useBuffers){
+  return travelValue + parking + (useBuffers ? buffer : 0);
+}
+
+/* Backward pass: given a target arrival at destination, walk backward through
+   final leg then every stop (reverse order) to find the required departure
+   from start. Returns { departureFromStart, entries } where entries is an
+   ordered (chronological) array describing every leg/stop/milestone. */
+function computeBackward(targetArrival, stops, finalLeg, useBuffers){
+  const reverseEntries = [];
+  let boundary = targetArrival; // currently: arrival at destination
+
+  const fLeg = legTime(finalLeg.expected, finalLeg.parking, finalLeg.buffer, useBuffers);
+  const departFromLast = boundary - fLeg;
+  reverseEntries.push({ type:"leg", label:"Final leg to destination", duration:fLeg, arrive:boundary, depart:departFromLast });
+  reverseEntries.push({ type:"milestone", label:"Arrive Destination", time:boundary });
+  boundary = departFromLast;
+
+  for(let i = stops.length - 1; i >= 0; i--){
+    const stop = stops[i];
+    const dwell = stop.duration + (useBuffers ? stop.stopBuffer : 0);
+    const departureFromStop = boundary;
+    const arrivalAtStop = departureFromStop - dwell;
+
+    reverseEntries.push({ type:"milestone", label:`Leave ${stop.name}`, time:departureFromStop });
+    reverseEntries.push({ type:"dwell", label:`Stay at ${stop.name} (${fmtDuration(dwell)})`, arrive:arrivalAtStop, depart:departureFromStop });
+    reverseEntries.push({ type:"milestone", label:`Arrive ${stop.name}`, time:arrivalAtStop, stopRef:stop });
+
+    const lTime = legTime(stop.travel.expected, stop.parking, stop.legBuffer, useBuffers);
+    const departBeforeStop = arrivalAtStop - lTime;
+    reverseEntries.push({ type:"leg", label: i===0 ? "Leg from start" : `Leg from ${stops[i-1].name}`, duration:lTime, arrive:arrivalAtStop, depart:departBeforeStop });
+
+    boundary = departBeforeStop;
+  }
+
+  reverseEntries.push({ type:"milestone", label:"Leave Start", time:boundary });
+
+  return { departureFromStart: boundary, entries: reverseEntries.reverse() };
+}
+
+/* Forward pass anchored at a fixed departure time, using a selector function
+   to pick which travel-time scenario (best/expected/worst) to apply per leg. */
+function computeForward(departureTime, stops, finalLeg, selector, useBuffers){
+  let t = departureTime;
+  for(const stop of stops){
+    const travelVal = selector(stop.travel);
+    t += legTime(travelVal, stop.parking, stop.legBuffer, useBuffers);
+    t += stop.duration + (useBuffers ? stop.stopBuffer : 0);
+  }
+  t += legTime(selector(finalLeg), finalLeg.parking, finalLeg.buffer, useBuffers);
+  return t;
+}
+function pickBest(t){ return (t.min !== null && t.min !== undefined) ? t.min : t.expected; }
+function pickExpected(t){ return t.expected; }
+function pickWorst(t){ return (t.max !== null && t.max !== undefined) ? t.max : t.expected; }
+
+/* ===================== CONFLICT DETECTION ===================== */
+function detectConflicts(stops, entries, recommendedDeparture, worstCaseArrival, requiredArrival, nowMinutes){
+  const conflicts = [];
+
+  stops.forEach(stop=>{
+    const arrivalEntry = entries.find(e=>e.type==="milestone" && e.stopRef===stop);
+    const departEntry = entries.find(e=>e.type==="milestone" && e.label===`Leave ${stop.name}`);
+    if(!arrivalEntry) return;
+    const arrival = arrivalEntry.time;
+    const departure = departEntry ? departEntry.time : null;
+
+    if(stop.opensAt !== null && arrival < stop.opensAt){
+      conflicts.push(`${stop.name} doesn't open until ${fmtTime(stop.opensAt)}, but the plan has you arriving at ${fmtTime(arrival)}.`);
+    }
+    if((stop.constraintType === "arriveBy" || stop.constraintType === "arriveAt") && stop.constraintTime !== null){
+      if(arrival > stop.constraintTime){
+        conflicts.push(`You'd arrive at ${stop.name} at ${fmtTime(arrival)}, after the required ${fmtTime(stop.constraintTime)}.`);
+      }
+    }
+    if((stop.constraintType === "leaveBy" || stop.constraintType === "leaveAt") && stop.constraintTime !== null && departure !== null){
+      if(departure > stop.constraintTime){
+        conflicts.push(`You'd need to leave ${stop.name} at ${fmtTime(departure)}, after the required ${fmtTime(stop.constraintTime)}.`);
+      }
+    }
+    if(stop.constraintType === "appointment" && stop.apptStart !== null && stop.apptEnd !== null){
+      if(arrival > stop.apptStart){
+        conflicts.push(`You'd arrive at ${stop.name} at ${fmtTime(arrival)}, after the appointment starts at ${fmtTime(stop.apptStart)}.`);
+      }
+      const dwell = departure !== null ? (departure - arrival) : null;
+      if(dwell !== null && dwell < (stop.apptEnd - stop.apptStart)){
+        conflicts.push(`The stay duration at ${stop.name} is shorter than the appointment window (${fmtTime(stop.apptStart)}–${fmtTime(stop.apptEnd)}). Increase the stay duration.`);
+      }
+    }
+  });
+
+  if(recommendedDeparture < 0 || recommendedDeparture > 1440){
+    conflicts.push("There isn't enough time for this schedule — the required departure falls outside a single day. Reduce stops, buffers, or durations.");
+  }
+
+  if(worstCaseArrival !== null && worstCaseArrival > requiredArrival){
+    conflicts.push(`Worst-case travel times would make you arrive at ${fmtTime(worstCaseArrival)}, which is after the required ${fmtTime(requiredArrival)}. Consider more buffer.`);
+  }
+
+  if(nowMinutes !== null && recommendedDeparture < nowMinutes){
+    conflicts.push(`The recommended departure (${fmtTime(recommendedDeparture)}) has already passed — you're behind schedule. Switch to "Leaving Now" mode.`);
+  }
+
+  return conflicts;
+}
+
+/* ===================== RENDER ===================== */
+function renderTimeline(entries){
+  const list = document.getElementById("timelineList");
+  list.innerHTML = entries
+    .filter(e => e.type === "milestone" || e.type === "dwell")
+    .map(e=>{
+      if(e.type === "milestone"){
+        return `<div class="t-row milestone"><div class="t-time mono">${fmtTime(e.time)}</div><div class="t-desc">${e.label}</div></div>`;
+      }
+      return `<div class="t-row dwell"><div class="t-time mono">${fmtTime(e.arrive)}–${fmtTime(e.depart)}</div><div class="t-desc">${e.label}</div></div>`;
+    })
+    .join("");
+}
+
+function renderConflicts(conflicts){
+  const el = document.getElementById("conflictsList");
+  if(conflicts.length === 0){
+    el.innerHTML = `<div class="no-conflicts">✅ No conflicts detected — this schedule works.</div>`;
+    return;
+  }
+  el.innerHTML = conflicts.map(c=>`<div class="conflict-item"><span class="flag">⚠️</span><span>${c}</span></div>`).join("");
+}
+
+function scenarioClass(arrival, required){
+  if(arrival > required) return "late";
+  if(arrival > required - 5) return "warn";
+  return "ok";
+}
+
+/* ===================== MAIN CALCULATE ===================== */
+function calculate(){
+  const startName = document.getElementById("startName").value.trim() || "Start";
+  const destName = document.getElementById("destName").value.trim() || "Destination";
+  const requiredArrival = parseTime(document.getElementById("requiredArrival").value) ?? 540;
+  const arrivalBuffer = num("arrivalBuffer", 0);
+  const stops = readStops();
+  const finalLeg = readFinalLeg();
+
+  const recommendedTarget = requiredArrival - arrivalBuffer;
+  const recommendedPass = computeBackward(recommendedTarget, stops, finalLeg, true);
+  const latestPass = computeBackward(requiredArrival, stops, finalLeg, false);
+
+  const totalTravel = recommendedPass.entries.filter(e=>e.type==="leg").reduce((sum,e)=>sum+e.duration,0);
+  const totalStopTime = recommendedPass.entries.filter(e=>e.type==="dwell").reduce((sum,e)=>sum+(e.depart-e.arrive),0);
+
+  let anchorDeparture, anchorLabel;
+  let nowMinutes = null;
+
+  if(mode === "now"){
+    nowMinutes = parseTime(document.getElementById("currentTime").value);
+    if(nowMinutes === null) nowMinutes = recommendedPass.departureFromStart;
+    anchorDeparture = nowMinutes;
+    anchorLabel = "now";
+  } else {
+    anchorDeparture = recommendedPass.departureFromStart;
+    anchorLabel = "recommended";
+  }
+
+  const bestArrival = computeForward(anchorDeparture, stops, finalLeg, pickBest, true);
+  const expectedArrival = computeForward(anchorDeparture, stops, finalLeg, pickExpected, true);
+  const worstArrival = computeForward(anchorDeparture, stops, finalLeg, pickWorst, true);
+
+  /* ---- primary metric ---- */
+  const boardTitle = document.getElementById("boardTitle");
+  const primaryValue = document.getElementById("primaryValue");
+  const primaryLabelEl = document.querySelector("#primaryMetric .m-label");
+  const primarySub = document.getElementById("primarySub");
+
+  if(mode === "now"){
+    boardTitle.textContent = "Leaving Now";
+    primaryLabelEl.textContent = "Projected Arrival";
+    primaryValue.textContent = fmtTime(expectedArrival);
+    const diff = Math.round(expectedArrival - requiredArrival);
+    if(diff > 0){
+      primarySub.textContent = `Running ${fmtDuration(diff)} late`;
+      primarySub.style.color = "var(--red)";
+    } else {
+      primarySub.textContent = `On track, ${fmtDuration(-diff)} to spare`;
+      primarySub.style.color = "var(--green)";
+    }
+  } else {
+    boardTitle.textContent = "Recommended";
+    primaryLabelEl.textContent = "Leave By";
+    primaryValue.textContent = fmtTime(recommendedPass.departureFromStart);
+    primarySub.textContent = `from ${startName} · includes your buffers`;
+    primarySub.style.color = "var(--muted)";
+  }
+
+  document.getElementById("metricRequired").textContent = fmtTime(requiredArrival);
+  document.getElementById("metricLatest").textContent = fmtTime(latestPass.departureFromStart);
+  document.getElementById("metricTravel").textContent = fmtDuration(totalTravel);
+  document.getElementById("metricStops").textContent = fmtDuration(totalStopTime);
+
+  /* ---- scenario row ---- */
+  const scenarioRow = document.getElementById("scenarioRow");
+  const scenarios = [
+    { label:"Best", value:bestArrival },
+    { label:"Expected", value:expectedArrival },
+    { label:"Worst", value:worstArrival }
+  ];
+  scenarioRow.innerHTML = scenarios.map(s=>{
+    const cls = scenarioClass(s.value, requiredArrival);
+    return `<div class="scenario ${cls}"><div class="s-label">${s.label}</div><div class="s-value mono">${fmtTime(s.value)}</div></div>`;
+  }).join("");
+
+  /* ---- conflicts ---- */
+  const conflicts = detectConflicts(stops, recommendedPass.entries, recommendedPass.departureFromStart, worstArrival, requiredArrival, mode==="plan" ? (parseTime(new Date().toTimeString().slice(0,5))) : null);
+  renderConflicts(conflicts);
+
+  /* ---- timeline ---- */
+  renderTimeline(recommendedPass.entries);
+}
+
+/* ===================== INIT ===================== */
+addStop();
+document.getElementById("stopsContainer").children[0].querySelector(".f-name").value = "Coffee Shop";
+document.getElementById("builder").addEventListener("input", ()=>calculate());
+document.getElementById("builder").addEventListener("change", ()=>calculate());
+calculate();
+</script>
+</body>
+</html>
